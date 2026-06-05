@@ -26,6 +26,32 @@ licenses(["notice"])
 exports_files(["LICENSE"])
 
 py_library(
+    name = "jaxite_cggi",
+    srcs = glob(
+        ["jaxite/jaxite_cggi/*.py"],
+        exclude = [
+            "**/*_test.py",
+            "**/test_utils.py",
+        ],
+    ),
+    deps = [
+        "@jaxite_deps//jax",
+        "@jaxite_deps//jaxlib",
+        # copybara: jax/experimental:pallas_lib
+        # copybara: jax/experimental:pallas_tpu
+    ],
+)
+
+py_library(
+    name = "jaxite_lib",
+    srcs = glob(["jaxite/jaxite_lib/*.py"]),
+    deps = [
+        ":jaxite_cggi",
+        ":test_utils",
+    ],
+)
+
+py_library(
     name = "jaxite_ckks",
     srcs = glob(
         ["jaxite/jaxite_ckks/*.py"],
@@ -44,20 +70,22 @@ py_test(
     timeout = "long",
     srcs = ["jaxite/jaxite_ckks/encode_test.py"],
     deps = [
+        ":jaxite",
         ":jaxite_ckks",
         "@abseil-py//absl/testing:absltest",
         "@jaxite_deps//hypothesis",
-        "@jaxite_deps//jax",
-        "@jaxite_deps//jaxlib",
         "@jaxite_deps//numpy",
     ],
 )
 
 tpu_test(
     name = "cross_equivalence_test",
-    size = "small",
+    size = "medium",
     srcs = ["jaxite/jaxite_ckks/cross_equivalence_test.py"],
+    data = ["jaxite_ckks/cross_equivalence_test_data.json"],
+    shard_count = 3,
     deps = [
+        ":jaxite",
         ":jaxite_ckks",
         "@abseil-py//absl/testing:absltest",
         "@jaxite_deps//jax",
@@ -73,6 +101,7 @@ tpu_test(
     main = "jaxite/jaxite_ckks/add_test.py",
     shard_count = 3,
     deps = [
+        ":jaxite",
         ":jaxite_ckks",
         "@abseil-py//absl/testing:absltest",
         "@abseil-py//absl/testing:parameterized",
@@ -89,6 +118,7 @@ py_test(
     timeout = "long",
     srcs = ["jaxite/jaxite_ckks/encrypt_test.py"],
     deps = [
+        ":jaxite",
         ":jaxite_ckks",
         "@abseil-py//absl/testing:absltest",
         "@jaxite_deps//hypothesis",
@@ -104,6 +134,7 @@ tpu_test(
     srcs = ["jaxite/jaxite_ckks/rescale_test.py"],
     shard_count = 6,
     deps = [
+        ":jaxite",
         ":jaxite_ckks",
         "@abseil-py//absl/testing:absltest",
         "@abseil-py//absl/testing:parameterized",
@@ -122,17 +153,18 @@ py_library(
             "**/*_test.py",
             "**/test_util.py",
             "jaxite_ckks/*",
+            "jaxite_cggi/*",
+            "jaxite_lib/*",
         ],
     ),
     visibility = [":internal"],
     deps = [
+        ":jaxite_cggi",
         # copybara: xprof_analysis_client  # buildcleaner: keep
         # copybara: xprof_session  # buildcleaner: keep
         "@jaxite_deps//gmpy2",
         "@jaxite_deps//jax",
         "@jaxite_deps//jaxlib",
-        # copybara: jax/experimental:pallas_lib
-        # copybara: jax/experimental:pallas_tpu
         "@jaxite_deps//numpy",
     ],
 )
@@ -140,9 +172,10 @@ py_library(
 # Test rules are below, though the source files are in subdirectories.
 py_library(
     name = "test_utils",
-    srcs = ["jaxite/jaxite_lib/test_utils.py"],
+    srcs = ["jaxite/jaxite_cggi/test_utils.py"],
     deps = [
         ":jaxite",
+        ":jaxite_cggi",
         "@jaxite_deps//jax",
         "@jaxite_deps//jaxlib",
     ],
@@ -153,10 +186,12 @@ tpu_test(
     name = "matrix_utils_test",
     size = "small",
     timeout = "moderate",
-    srcs = ["jaxite/jaxite_lib/matrix_utils_test.py"],
+    srcs = ["jaxite/jaxite_cggi/matrix_utils_test.py"],
     shard_count = 3,
     deps = [
         ":jaxite",
+        ":jaxite_cggi",
+        ":test_utils",
         # copybara: xprof_analysis_client  # buildcleaner: keep
         # copybara: xprof_session  # buildcleaner: keep
         "@abseil-py//absl/testing:absltest",
@@ -172,10 +207,12 @@ tpu_test(
     name = "polymul_kernel_test",
     size = "large",
     timeout = "moderate",
-    srcs = ["jaxite/jaxite_lib/polymul_kernel_test.py"],
+    srcs = ["jaxite/jaxite_cggi/polymul_kernel_test.py"],
     shard_count = 3,
     deps = [
         ":jaxite",
+        ":jaxite_cggi",
+        ":test_utils",
         # copybara: xprof_analysis_client  # buildcleaner: keep
         # copybara: xprof_session  # buildcleaner: keep
         "@abseil-py//absl/testing:absltest",
@@ -196,6 +233,8 @@ tpu_test(
     srcs_version = "PY3ONLY",
     deps = [
         ":jaxite",
+        ":jaxite_cggi",
+        ":test_utils",
         # copybara: xprof_analysis_client  # buildcleaner: keep
         # copybara: xprof_session  # buildcleaner: keep
         "@abseil-py//absl/testing:absltest",
@@ -235,6 +274,8 @@ tpu_test(
     srcs_version = "PY3ONLY",
     deps = [
         ":jaxite",
+        ":jaxite_cggi",
+        ":test_utils",
         # copybara: xprof_analysis_client  # buildcleaner: keep
         # copybara: xprof_session  # buildcleaner: keep
         # copybara: resources
@@ -256,60 +297,10 @@ tpu_test(
     srcs_version = "PY3ONLY",
     deps = [
         ":jaxite",
+        ":jaxite_cggi",
+        ":test_utils",
         # copybara: xprof_analysis_client  # buildcleaner: keep
         # copybara: xprof_session  # buildcleaner: keep
-        "@abseil-py//absl/testing:absltest",
-        "@abseil-py//absl/testing:parameterized",
-        "@jaxite_deps//jax",
-        "@jaxite_deps//jaxlib",
-        "@jaxite_deps//numpy",
-    ],
-)
-
-tpu_test(
-    name = "jaxite_word_ntt_test",
-    size = "large",
-    timeout = "eternal",
-    srcs = ["jaxite/jaxite_word/ntt_test.py"],
-    shard_count = 3,
-    deps = [
-        ":jaxite",
-        # copybara: xprof_analysis_client  # buildcleaner: keep
-        # copybara: xprof_session  # buildcleaner: keep
-        "@abseil-py//absl/testing:absltest",
-        "@abseil-py//absl/testing:parameterized",
-        "@jaxite_deps//jax",
-        "@jaxite_deps//jaxlib",
-        "@jaxite_deps//numpy",
-    ],
-)
-
-tpu_test(
-    name = "jaxite_word_sub_test",
-    size = "large",
-    timeout = "eternal",
-    srcs = ["jaxite/jaxite_word/sub_test.py"],
-    shard_count = 3,
-    deps = [
-        ":jaxite",
-        # copybara: xprof_analysis_client  # buildcleaner: keep
-        # copybara: xprof_session  # buildcleaner: keep
-        "@abseil-py//absl/testing:absltest",
-        "@abseil-py//absl/testing:parameterized",
-        "@jaxite_deps//jax",
-        "@jaxite_deps//jaxlib",
-        "@jaxite_deps//numpy",
-    ],
-)
-
-tpu_test(
-    name = "add_test",
-    size = "large",
-    timeout = "eternal",
-    srcs = ["jaxite/jaxite_word/add_test.py"],
-    shard_count = 3,
-    deps = [
-        ":jaxite",
         "@abseil-py//absl/testing:absltest",
         "@abseil-py//absl/testing:parameterized",
         "@jaxite_deps//jax",
@@ -322,9 +313,11 @@ cpu_gpu_tpu_test(
     name = "decomposition_test",
     size = "small",
     timeout = "moderate",
-    srcs = ["jaxite/jaxite_lib/decomposition_test.py"],
+    srcs = ["jaxite/jaxite_cggi/decomposition_test.py"],
     deps = [
         ":jaxite",
+        ":jaxite_cggi",
+        ":test_utils",
         "@abseil-py//absl/testing:absltest",
         "@jaxite_deps//hypothesis",
         "@jaxite_deps//jax",
@@ -337,9 +330,11 @@ cpu_gpu_tpu_test(
     name = "encoding_test",
     size = "small",
     timeout = "moderate",
-    srcs = ["jaxite/jaxite_lib/encoding_test.py"],
+    srcs = ["jaxite/jaxite_cggi/encoding_test.py"],
     deps = [
         ":jaxite",
+        ":jaxite_cggi",
+        ":test_utils",
         "@abseil-py//absl/testing:absltest",
         "@abseil-py//absl/testing:parameterized",
         "@jaxite_deps//hypothesis",
@@ -352,10 +347,11 @@ cpu_gpu_tpu_test(
     name = "lwe_test",
     size = "small",
     timeout = "moderate",
-    srcs = ["jaxite/jaxite_lib/lwe_test.py"],
+    srcs = ["jaxite/jaxite_cggi/lwe_test.py"],
     shard_count = 50,
     deps = [
         ":jaxite",
+        ":jaxite_cggi",
         ":test_utils",
         "@abseil-py//absl/testing:absltest",
         "@abseil-py//absl/testing:parameterized",
@@ -369,9 +365,10 @@ cpu_gpu_tpu_test(
     name = "rlwe_test",
     size = "small",
     timeout = "moderate",
-    srcs = ["jaxite/jaxite_lib/rlwe_test.py"],
+    srcs = ["jaxite/jaxite_cggi/rlwe_test.py"],
     deps = [
         ":jaxite",
+        ":jaxite_cggi",
         ":test_utils",
         "@abseil-py//absl/testing:absltest",
         "@abseil-py//absl/testing:parameterized",
@@ -385,10 +382,11 @@ cpu_gpu_tpu_test(
 cpu_gpu_tpu_test(
     name = "bootstrap_test",
     size = "large",
-    srcs = ["jaxite/jaxite_lib/bootstrap_test.py"],
+    srcs = ["jaxite/jaxite_cggi/bootstrap_test.py"],
     shard_count = 50,
     deps = [
         ":jaxite",
+        ":jaxite_cggi",
         ":test_utils",
         "@abseil-py//absl/testing:absltest",
         "@abseil-py//absl/testing:parameterized",
@@ -401,10 +399,12 @@ cpu_gpu_tpu_test(
 cpu_gpu_tpu_test(
     name = "blind_rotate_test",
     size = "large",
-    srcs = ["jaxite/jaxite_lib/blind_rotate_test.py"],
+    srcs = ["jaxite/jaxite_cggi/blind_rotate_test.py"],
     shard_count = 10,
     deps = [
         ":jaxite",
+        ":jaxite_cggi",
+        ":test_utils",
         "@abseil-py//absl/testing:absltest",
         "@abseil-py//absl/testing:parameterized",
         "@jaxite_deps//hypothesis",
@@ -418,9 +418,11 @@ cpu_gpu_tpu_test(
     name = "test_polynomial_test",
     size = "small",
     timeout = "moderate",
-    srcs = ["jaxite/jaxite_lib/test_polynomial_test.py"],
+    srcs = ["jaxite/jaxite_cggi/test_polynomial_test.py"],
     deps = [
         ":jaxite",
+        ":jaxite_cggi",
+        ":test_utils",
         "@abseil-py//absl/testing:absltest",
         "@abseil-py//absl/testing:parameterized",
         "@jaxite_deps//jax",
@@ -432,10 +434,11 @@ cpu_gpu_tpu_test(
 cpu_gpu_tpu_test(
     name = "key_switch_test",
     size = "large",
-    srcs = ["jaxite/jaxite_lib/key_switch_test.py"],
+    srcs = ["jaxite/jaxite_cggi/key_switch_test.py"],
     shard_count = 50,
     deps = [
         ":jaxite",
+        ":jaxite_cggi",
         ":test_utils",
         "@abseil-py//absl/testing:absltest",
         "@abseil-py//absl/testing:parameterized",
@@ -447,9 +450,11 @@ cpu_gpu_tpu_test(
 
 cpu_gpu_tpu_test(
     name = "random_source_test",
-    srcs = ["jaxite/jaxite_lib/random_source_test.py"],
+    srcs = ["jaxite/jaxite_cggi/random_source_test.py"],
     deps = [
         ":jaxite",
+        ":jaxite_cggi",
+        ":test_utils",
         "@abseil-py//absl/testing:absltest",
         "@abseil-py//absl/testing:parameterized",
         "@jaxite_deps//jax",
@@ -461,10 +466,11 @@ cpu_gpu_tpu_test(
     name = "rgsw_test",
     size = "small",
     timeout = "moderate",
-    srcs = ["jaxite/jaxite_lib/rgsw_test.py"],
+    srcs = ["jaxite/jaxite_cggi/rgsw_test.py"],
     shard_count = 10,
     deps = [
         ":jaxite",
+        ":jaxite_cggi",
         ":test_utils",
         "@abseil-py//absl/testing:absltest",
         "@abseil-py//absl/testing:parameterized",
@@ -480,6 +486,8 @@ py_test(
     srcs = ["jaxite/jaxite_bool/lut_test.py"],
     deps = [
         ":jaxite",
+        ":jaxite_cggi",
+        ":test_utils",
         "@abseil-py//absl/testing:absltest",
     ],
 )
@@ -491,6 +499,8 @@ tpu_test(
     shard_count = 50,
     deps = [
         ":jaxite",
+        ":jaxite_cggi",
+        ":test_utils",
         "@abseil-py//absl/testing:absltest",
         "@abseil-py//absl/testing:parameterized",
     ],
@@ -503,6 +513,8 @@ gpu_tpu_test(
     shard_count = 20,
     deps = [
         ":jaxite",
+        ":jaxite_cggi",
+        ":test_utils",
         "@abseil-py//absl/testing:absltest",
         "@abseil-py//absl/testing:parameterized",
     ],
@@ -515,6 +527,8 @@ multichip_tpu_test(
     tags = ["manual"],
     deps = [
         ":jaxite",
+        ":jaxite_cggi",
+        ":test_utils",
         "@abseil-py//absl/testing:absltest",
         "@abseil-py//absl/testing:parameterized",
     ],
@@ -526,8 +540,8 @@ py_test(
     timeout = "moderate",
     srcs = ["jaxite/jaxite_ckks/rns_test.py"],
     deps = [
+        ":jaxite",
         ":jaxite_ckks",
-        ":test_utils",
         "@abseil-py//absl/testing:absltest",
         "@abseil-py//absl/testing:parameterized",
         "@jaxite_deps//hypothesis",
@@ -544,6 +558,7 @@ py_test(
     timeout = "moderate",
     srcs = ["jaxite/jaxite_ckks/rns_utils_test.py"],
     deps = [
+        ":jaxite",
         ":jaxite_ckks",
         "@abseil-py//absl/testing:absltest",
         "@abseil-py//absl/testing:parameterized",
@@ -558,6 +573,7 @@ cpu_gpu_tpu_test(
     srcs = ["jaxite/jaxite_ckks/basis_conversion_test.py"],
     shard_count = 10,
     deps = [
+        ":jaxite",
         ":jaxite_ckks",
         "@abseil-py//absl/testing:absltest",
         "@abseil-py//absl/testing:parameterized",
@@ -574,6 +590,7 @@ cpu_gpu_tpu_test(
     timeout = "moderate",
     srcs = ["jaxite/jaxite_ckks/barrett_test.py"],
     deps = [
+        ":jaxite",
         ":jaxite_ckks",
         "@abseil-py//absl/testing:absltest",
         "@abseil-py//absl/testing:parameterized",
@@ -591,6 +608,7 @@ tpu_test(
     srcs = ["jaxite/jaxite_ckks/ntt_test.py"],
     shard_count = 3,
     deps = [
+        ":jaxite",
         ":jaxite_ckks",
         "@abseil-py//absl/testing:absltest",
         "@abseil-py//absl/testing:parameterized",
@@ -607,6 +625,7 @@ py_test(
     timeout = "moderate",
     srcs = ["jaxite/jaxite_ckks/math_test.py"],
     deps = [
+        ":jaxite",
         ":jaxite_ckks",
         "@abseil-py//absl/testing:absltest",
         "@abseil-py//absl/testing:parameterized",
@@ -619,6 +638,7 @@ py_test(
     size = "small",
     srcs = ["jaxite/jaxite_ckks/key_switching_key_test.py"],
     deps = [
+        ":jaxite",
         ":jaxite_ckks",
         "@abseil-py//absl/testing:absltest",
         "@jaxite_deps//jax",
@@ -632,10 +652,55 @@ py_test(
     size = "small",
     srcs = ["jaxite/jaxite_ckks/key_gen_test.py"],
     deps = [
+        ":jaxite",
         ":jaxite_ckks",
         "@abseil-py//absl/testing:absltest",
+        "@jaxite_deps//numpy",
+    ],
+)
+
+py_test(
+    name = "jaxite_word/add_test",
+    srcs = ["jaxite/jaxite_word/add_test.py"],
+    deps = [
+        ":jaxite",
+        ":jaxite_cggi",
+        ":test_utils",
+        "@abseil-py//absl/testing:absltest",
+        "@abseil-py//absl/testing:parameterized",
+        "@jaxite_deps//jax",
+        "@jaxite_deps//jaxlib",
+    ],
+)
+
+py_test(
+    name = "jaxite_word/ntt_test",
+    srcs = ["jaxite/jaxite_word/ntt_test.py"],
+    deps = [
+        ":jaxite",
+        ":jaxite_cggi",
+        ":test_utils",
+        # copybara: xprof_analysis_client
+        "//perftools/accelerators/xprof/api/python:xprof_context_manager",
+        # copybara: xprof_session
+        "@abseil-py//absl/testing:absltest",
+        "@abseil-py//absl/testing:parameterized",
         "@jaxite_deps//jax",
         "@jaxite_deps//jaxlib",
         "@jaxite_deps//numpy",
+    ],
+)
+
+py_test(
+    name = "jaxite_word/sub_test",
+    srcs = ["jaxite/jaxite_word/sub_test.py"],
+    deps = [
+        ":jaxite",
+        ":jaxite_cggi",
+        ":test_utils",
+        "@abseil-py//absl/testing:absltest",
+        "@abseil-py//absl/testing:parameterized",
+        "@jaxite_deps//jax",
+        "@jaxite_deps//jaxlib",
     ],
 )

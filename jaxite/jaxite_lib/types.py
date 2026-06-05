@@ -1,10 +1,8 @@
-"""A module containing basic types for TFHE."""
+"""Transitional proxy module forwarding to jaxite_cggi."""
 
-from typing import Any
+# Deprecated compatibility alias forwarding to jaxite_cggi
+from jaxite.jaxite_cggi import types
 
-import jax.numpy as jnp
-
-
-LweCleartext = int
-LwePlaintext = jnp.uint32
-LweCiphertext = Any
+LweCleartext = types.LweCleartext
+LwePlaintext = types.LwePlaintext
+LweCiphertext = types.LweCiphertext
